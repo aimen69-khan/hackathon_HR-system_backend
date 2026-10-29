@@ -22,7 +22,7 @@ app.use(helmet());
 app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:5173', 'http://127.0.0.1:5173'], credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use('/api/auth/login', rateLimit({ windowMs: 15*60*1000, max: 30, message: { error: 'Too many attempts' } }));
+app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts' } }));
 
 app.get('/api/health', (req, res) => {
   const states = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
@@ -35,7 +35,7 @@ app.post('/api/auth/register', async (req, res, next) => {
     const { email, password, name, role = 'employee' } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: 'Email, password and name required' });
     if (await User.findOne({ email: email.toLowerCase() })) return res.status(400).json({ error: 'Email already registered' });
-    const safeRole = ['employee','hr'].includes(role) ? role : 'employee';
+    const safeRole = ['employee', 'hr'].includes(role) ? role : 'employee';
     let employee = null;
     if (safeRole === 'employee' || safeRole === 'hr') {
       const count = await Employee.countDocuments();
@@ -62,7 +62,7 @@ app.post('/api/auth/register', async (req, res, next) => {
           balances: { Annual: 20, Sick: 10, Casual: 8, Unpaid: 0, Maternity: 0, Paternity: 0 },
           used: { Annual: 0, Sick: 0, Casual: 0, Unpaid: 0, Maternity: 0, Paternity: 0 },
         });
-      } catch (_) {}
+      } catch (_) { }
     }
     const user = await User.create({
       email: email.toLowerCase(),
@@ -213,11 +213,11 @@ app.patch('/api/leave/requests/:id', protect, authorize('admin', 'hr'), async (r
 app.get('/api/attendance/board', protect, async (req, res, next) => {
   try {
     const date = req.query.date ? new Date(req.query.date) : new Date();
-    date.setHours(0,0,0,0);
+    date.setHours(0, 0, 0, 0);
     const nextDay = new Date(date); nextDay.setDate(nextDay.getDate() + 1);
     const records = await Attendance.find({ date: { $gte: date, $lt: nextDay } }).sort({ employeeName: 1 });
     const summary = { present: records.filter(r => r.status === 'Present').length, late: records.filter(r => r.status === 'Late').length, absent: records.filter(r => r.status === 'Absent').length, onLeave: records.filter(r => r.status === 'On leave').length, total: records.length };
-    res.json({ date: date.toISOString().slice(0,10), records, summary });
+    res.json({ date: date.toISOString().slice(0, 10), records, summary });
   } catch (e) { next(e); }
 });
 app.post('/api/attendance/check-in', protect, async (req, res, next) => {
@@ -226,11 +226,11 @@ app.post('/api/attendance/check-in', protect, async (req, res, next) => {
     if (!employeeId) return res.status(400).json({ error: 'No employee linked' });
     const emp = await Employee.findById(employeeId);
     if (!emp) return res.status(404).json({ error: 'Employee not found' });
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const next = new Date(today); next.setDate(next.getDate() + 1);
     let record = await Attendance.findOne({ employee: employeeId, date: { $gte: today, $lt: next } });
     const now = new Date();
-    const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const status = time > '09:15' ? 'Late' : 'Present';
     if (record) {
       if (record.checkIn) return res.status(400).json({ error: 'Already checked in' });
@@ -245,16 +245,16 @@ app.post('/api/attendance/check-out', protect, async (req, res, next) => {
   try {
     const employeeId = req.user.employeeId;
     if (!employeeId) return res.status(400).json({ error: 'No employee linked' });
-    const today = new Date(); today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
     const next = new Date(today); next.setDate(next.getDate() + 1);
     const record = await Attendance.findOne({ employee: employeeId, date: { $gte: today, $lt: next } });
     if (!record || !record.checkIn) return res.status(400).json({ error: 'Must check in first' });
     if (record.checkOut) return res.status(400).json({ error: 'Already checked out' });
     const now = new Date();
-    record.checkOut = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const [h1,m1] = record.checkIn.split(':').map(Number);
-    const [h2,m2] = record.checkOut.split(':').map(Number);
-    record.workHours = Math.max(0, (h2*60+m2 - (h1*60+m1))/60);
+    record.checkOut = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const [h1, m1] = record.checkIn.split(':').map(Number);
+    const [h2, m2] = record.checkOut.split(':').map(Number);
+    record.workHours = Math.max(0, (h2 * 60 + m2 - (h1 * 60 + m1)) / 60);
     await record.save();
     res.json(record);
   } catch (e) { next(e); }
@@ -284,14 +284,14 @@ app.post('/api/attendance/corrections', protect, async (req, res, next) => {
 app.patch('/api/attendance/corrections/:id', protect, authorize('admin', 'hr'), async (req, res, next) => {
   try {
     const { status } = req.body;
-    if (!['approved','rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
     const doc = await AttendanceCorrection.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: 'Not found' });
     if (doc.status !== 'pending') return res.status(400).json({ error: 'Already decided' });
     doc.status = status; doc.reviewedBy = req.user.name; doc.reviewedAt = new Date(); await doc.save();
     if (status === 'approved') {
-      const dayStart = new Date(doc.date); dayStart.setHours(0,0,0,0);
-      const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1);
+      const dayStart = new Date(doc.date); dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
       let att = await Attendance.findOne({ employee: doc.employee, date: { $gte: dayStart, $lt: dayEnd } });
       if (att) { if (doc.requestedCheckIn) att.checkIn = doc.requestedCheckIn; if (doc.requestedCheckOut) att.checkOut = doc.requestedCheckOut; att.status = 'Present'; await att.save(); }
       else await Attendance.create({ employee: doc.employee, employeeCode: doc.employeeCode, employeeName: doc.employeeName, date: dayStart, checkIn: doc.requestedCheckIn, checkOut: doc.requestedCheckOut, status: 'Present' });
@@ -388,10 +388,10 @@ app.post('/api/payroll', protect, authorize('admin', 'hr'), async (req, res, nex
     if (await Payroll.findOne({ month })) return res.status(400).json({ error: 'Already exists' });
     const employees = await Employee.find({ status: { $ne: 'Resigned' } });
     const payslips = employees.map(e => {
-      const basic = e.salary, allowances = Math.round(basic*0.15), deductions = Math.round(basic*0.05), tax = Math.round(basic*0.08);
-      return { employee: e._id, employeeCode: e.code, employeeName: e.name, department: e.department, basic, allowances, deductions, tax, net: basic+allowances-deductions-tax, status: 'draft' };
+      const basic = e.salary, allowances = Math.round(basic * 0.15), deductions = Math.round(basic * 0.05), tax = Math.round(basic * 0.08);
+      return { employee: e._id, employeeCode: e.code, employeeName: e.name, department: e.department, basic, allowances, deductions, tax, net: basic + allowances - deductions - tax, status: 'draft' };
     });
-    const payroll = await Payroll.create({ month, status: 'draft', totalGross: payslips.reduce((s,p)=>s+p.basic+p.allowances,0), totalNet: payslips.reduce((s,p)=>s+p.net,0), employeeCount: payslips.length, payslips });
+    const payroll = await Payroll.create({ month, status: 'draft', totalGross: payslips.reduce((s, p) => s + p.basic + p.allowances, 0), totalNet: payslips.reduce((s, p) => s + p.net, 0), employeeCount: payslips.length, payslips });
     res.status(201).json(payroll);
   } catch (e) { next(e); }
 });
@@ -400,7 +400,7 @@ app.post('/api/payroll/:month/status', protect, authorize('admin', 'hr'), async 
     const payroll = await Payroll.findOne({ month: req.params.month });
     if (!payroll) return res.status(404).json({ error: 'Not found' });
     payroll.status = req.body.status;
-    if (['finalized','paid'].includes(req.body.status)) { payroll.finalizedAt = new Date(); payroll.finalizedBy = req.user.name; payroll.payslips.forEach(p => { p.status = req.body.status === 'paid' ? 'paid' : 'processed'; }); }
+    if (['finalized', 'paid'].includes(req.body.status)) { payroll.finalizedAt = new Date(); payroll.finalizedBy = req.user.name; payroll.payslips.forEach(p => { p.status = req.body.status === 'paid' ? 'paid' : 'processed'; }); }
     await payroll.save();
     res.json(payroll);
   } catch (e) { next(e); }
@@ -414,7 +414,7 @@ app.get('/api/organization/departments', protect, async (req, res, next) => {
   try { const org = await Organization.findOne(); res.json(org?.departments || []); } catch (e) { next(e); }
 });
 app.post('/api/organization/departments', protect, authorize('admin', 'hr'), async (req, res, next) => {
-  try { const org = await Organization.findOne(); org.departments.push(req.body); await org.save(); res.status(201).json(org.departments[org.departments.length-1]); } catch (e) { next(e); }
+  try { const org = await Organization.findOne(); org.departments.push(req.body); await org.save(); res.status(201).json(org.departments[org.departments.length - 1]); } catch (e) { next(e); }
 });
 app.patch('/api/organization/departments/:id', protect, authorize('admin', 'hr'), async (req, res, next) => {
   try { const org = await Organization.findOne(); const d = org.departments.id(req.params.id); if (!d) return res.status(404).json({ error: 'Not found' }); Object.assign(d, req.body); await org.save(); res.json(d); } catch (e) { next(e); }
@@ -423,13 +423,13 @@ app.get('/api/organization/leave-types', protect, async (req, res, next) => {
   try { const org = await Organization.findOne(); res.json(org?.leaveTypes || []); } catch (e) { next(e); }
 });
 app.post('/api/organization/leave-types', protect, authorize('admin', 'hr'), async (req, res, next) => {
-  try { const org = await Organization.findOne(); org.leaveTypes.push(req.body); await org.save(); res.status(201).json(org.leaveTypes[org.leaveTypes.length-1]); } catch (e) { next(e); }
+  try { const org = await Organization.findOne(); org.leaveTypes.push(req.body); await org.save(); res.status(201).json(org.leaveTypes[org.leaveTypes.length - 1]); } catch (e) { next(e); }
 });
 app.get('/api/organization/holidays', protect, async (req, res, next) => {
   try { const org = await Organization.findOne(); res.json(org?.holidays || []); } catch (e) { next(e); }
 });
 app.post('/api/organization/holidays', protect, authorize('admin', 'hr'), async (req, res, next) => {
-  try { const org = await Organization.findOne(); org.holidays.push(req.body); await org.save(); res.status(201).json(org.holidays[org.holidays.length-1]); } catch (e) { next(e); }
+  try { const org = await Organization.findOne(); org.holidays.push(req.body); await org.save(); res.status(201).json(org.holidays[org.holidays.length - 1]); } catch (e) { next(e); }
 });
 app.get('/api/organization/settings', protect, async (req, res, next) => {
   try { const org = await Organization.findOne(); res.json(org?.settings || {}); } catch (e) { next(e); }
@@ -445,20 +445,20 @@ app.get('/api/dashboard/admin', protect, authorize('admin'), async (req, res, ne
     const headcount = active.length;
     const male = active.filter(e => e.gender === 'Male').length;
     const female = active.filter(e => e.gender === 'Female').length;
-    const avgSalary = headcount ? Math.round(active.reduce((s,e)=>s+e.salary,0)/headcount) : 0;
-    const payrollExpense = active.reduce((s,e)=>s+e.salary,0);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+    const avgSalary = headcount ? Math.round(active.reduce((s, e) => s + e.salary, 0) / headcount) : 0;
+    const payrollExpense = active.reduce((s, e) => s + e.salary, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const todayAtt = await Attendance.find({ date: { $gte: today, $lt: tomorrow } });
     const present = todayAtt.filter(a => a.status === 'Present' || a.status === 'Late').length;
-    const attendanceRate = todayAtt.length ? +((present/todayAtt.length)*100).toFixed(1) : 93.4;
+    const attendanceRate = todayAtt.length ? +((present / todayAtt.length) * 100).toFixed(1) : 93.4;
     res.json({ headcount, headcountGrowth: 3, attrition: 4.2, averageSalary: avgSalary, payrollExpense, attendanceRate, stats: { maleEmployees: male, femaleEmployees: female, avgTenure: 2.3 } });
   } catch (e) { next(e); }
 });
 app.get('/api/dashboard/hr', protect, authorize('admin', 'hr'), async (req, res, next) => {
   try {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const todayAtt = await Attendance.find({ date: { $gte: today, $lt: tomorrow } });
     res.json({
       presentToday: todayAtt.filter(a => a.status === 'Present' || a.status === 'Late').length,
@@ -473,12 +473,12 @@ app.get('/api/dashboard/employee', protect, async (req, res, next) => {
   try {
     let presentToday = false, leaveBalance = { casual: 8, sick: 5, annual: 12 };
     if (req.user.employeeId) {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
       const att = await Attendance.findOne({ employee: req.user.employeeId, date: { $gte: today, $lt: tomorrow } });
       presentToday = !!(att && (att.status === 'Present' || att.status === 'Late'));
       const bal = await LeaveBalance.findOne({ employee: req.user.employeeId });
-      if (bal) leaveBalance = { casual: Math.max(0,(bal.balances.Casual||0)-(bal.used.Casual||0)), sick: Math.max(0,(bal.balances.Sick||0)-(bal.used.Sick||0)), annual: Math.max(0,(bal.balances.Annual||0)-(bal.used.Annual||0)) };
+      if (bal) leaveBalance = { casual: Math.max(0, (bal.balances.Casual || 0) - (bal.used.Casual || 0)), sick: Math.max(0, (bal.balances.Sick || 0) - (bal.used.Sick || 0)), annual: Math.max(0, (bal.balances.Annual || 0) - (bal.used.Annual || 0)) };
     }
     res.json({ presentToday, hoursThisWeek: 40, leaveBalance, nextPayslip: '30-Sep-2026' });
   } catch (e) { next(e); }
@@ -501,6 +501,11 @@ app.get('/api/analytics', protect, authorize('admin', 'hr'), async (req, res, ne
 
 app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 app.use(errorHandler);
+
+app.get("/", (req, res) => {
+  res.json({ message: "Backend is working!" });
+});
+
 
 async function start() {
   try {
