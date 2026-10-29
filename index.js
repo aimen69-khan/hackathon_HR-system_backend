@@ -499,12 +499,15 @@ app.get('/api/analytics', protect, authorize('admin', 'hr'), async (req, res, ne
   } catch (e) { next(e); }
 });
 
-app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
-app.use(errorHandler);
-
 app.get("/", (req, res) => {
   res.json({ message: "Backend is working!" });
 });
+
+
+app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
+app.use(errorHandler);
+
+
 
 
 async function start() {
