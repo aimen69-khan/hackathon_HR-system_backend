@@ -1,19 +1,15 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "index.js",
-            "use": "@vercel/node"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "index.js"
-        }
-    ],
-    "env": {
-        "DATABASE_URL": "mongodb+srv://aimen69khan_db_user:XyU1Ebnl1RtKwiWs@cluster0.3hagdkb.mongodb.net/hcm-lite?retryWrites=true&w=majority",
-        "API_KEY": "@api_key"
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
     }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "index.js"
+    }
+  ]
 }
