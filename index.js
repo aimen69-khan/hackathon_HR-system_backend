@@ -19,7 +19,20 @@ const PORT = process.env.PORT || 5000;
 const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 app.use(helmet());
-app.use(cors({ origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'http://localhost:5173', 'http://127.0.0.1:5173'], credentials: true }));
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://hackathon-hr-system-gs62.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean);
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use('/api/auth/login', rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Too many attempts' } }));
